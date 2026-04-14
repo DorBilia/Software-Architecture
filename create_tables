@@ -1,0 +1,15 @@
+CREATE TABLE Gate(
+        ID VARCHAR(20)PRIMARY KEY,
+        OperatorID INT
+);
+
+CREATE TABLE PassengerStatus(
+        GateID VARCHAR(20),
+        PassengerID INT,
+        IsAboard BOOLEAN,
+        PRIMARY KEY(GateID, PassengerID),
+        CONSTRAINT fk_gate
+        FOREIGN KEY(GateID)
+        REFERENCES Gate(ID)
+        ON DELETE CASCADE
+);
