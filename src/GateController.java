@@ -23,7 +23,7 @@ public class GateController {
                 System.out.println("Error: Gate " + gateID + " does not exist.");
                 return;
             }
-
+            rsGate.close();
             String checkWorkerSql = String.format(
                     "SELECT e.employee_id, g.id as assigned_gate " +
                             "FROM employees e " +
@@ -37,12 +37,13 @@ public class GateController {
                 return;
             }
 
+
             String assignedGate = rsWorker.getString("assigned_gate");
             if (assignedGate != null && !assignedGate.equals(gateID)) {
                 System.out.println("Error: Worker " + workerID + " is busy working at Gate " + assignedGate + ".");
                 return;
             }
-
+            rsWorker.close();
             String updateSql = String.format("UPDATE gate SET operatorid = %d WHERE id = '%s'", workerID, gateID);
             db.execute(updateSql, false);
             System.out.println("Success: Worker " + workerID + " has been assigned to Gate " + gateID + ".");
