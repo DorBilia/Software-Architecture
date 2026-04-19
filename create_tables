@@ -1,15 +1,27 @@
-CREATE TABLE Gate(
-        ID VARCHAR(20)PRIMARY KEY,
-        OperatorID INT
+CREATE TABLE EMPLOYEES (
+    employee_id INT PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50)
 );
 
-CREATE TABLE PassengerStatus(
-        GateID VARCHAR(20),
-        PassengerID INT,
-        IsAboard BOOLEAN,
-        PRIMARY KEY(GateID, PassengerID),
-        CONSTRAINT fk_gate
-        FOREIGN KEY(GateID)
-        REFERENCES Gate(ID)
-        ON DELETE CASCADE
+CREATE TABLE Passenger (
+    passenger_id INT PRIMARY KEY,
+    passenger_name VARCHAR(100)
+);
+
+CREATE TABLE Gate (
+    ID VARCHAR(20) PRIMARY KEY,
+    OperatorID INT,
+    CONSTRAINT fk_employee FOREIGN KEY (OperatorID) REFERENCES EMPLOYEES(employee_id)
+);
+
+CREATE TABLE Passenger_Status (
+    GateID VARCHAR(20),
+    PassengerID INT,
+    IsAboard BOOLEAN DEFAULT FALSE,
+    -- Composite Primary Key
+    PRIMARY KEY (GateID, PassengerID),
+    -- Foreign Key Constraints
+    CONSTRAINT fk_gate FOREIGN KEY (GateID) REFERENCES Gate(ID),
+    CONSTRAINT fk_passenger FOREIGN KEY (PassengerID) REFERENCES Passenger(passenger_id)
 );
