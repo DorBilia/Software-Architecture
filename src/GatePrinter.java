@@ -1,22 +1,25 @@
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class GatePrinter {
 
-    private final Connection connection;
+    private dbConnection db;
 
-    public GatePrinter(Connection connection) {
-        this.connection = connection;
+    public GatePrinter(dbConnection db) {
+        this.db = db;
     }
 
     // Print all gates
     public void printGates() {
-        String sql = "SELECT ID, OperatorID FROM Gate ORDER BY ID";
+        String sql = "SELECT id, operatorid FROM gate ORDER BY id";
 
-        try (PreparedStatement stmt = connection.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+        try {
+            ResultSet rs = (ResultSet) db.execute(sql, true);
+
+            if (rs == null) {
+                System.out.println("Error retrieving gates.");
+                return;
+            }
 
             System.out.println("===== All Gates =====");
 
@@ -25,13 +28,13 @@ public class GatePrinter {
             while (rs.next()) {
                 found = true;
 
-                String gateID = rs.getString("ID");
-                Integer operatorID = (Integer) rs.getObject("OperatorID");
+                String gateID = rs.getString("id");
+                Object operatorObj = rs.getObject("operatorid");
 
                 System.out.println("Gate ID: " + gateID);
 
-                if (operatorID != null) {
-                    System.out.println("Operator ID: " + operatorID);
+                if (operatorObj != null) {
+                    System.out.println("Operator ID: " + operatorObj);
                     System.out.println("Status: OPEN");
                 } else {
                     System.out.println("Operator ID: None");
@@ -45,116 +48,122 @@ public class GatePrinter {
                 System.out.println("No gates found.");
             }
 
+            rs.close();
+
         } catch (SQLException e) {
-            System.out.println("Error printing gates: " + e.getMessage());
+            System.out.println("Database Error: " + e.getMessage());
         }
     }
 
-    // Print one gate with full details
+    // Print gate with full details
     public void printGateById(String gateID) {
-        String gateSql = "SELECT ID, OperatorID FROM Gate WHERE ID = ?";
 
-        String summarySql = """
+        String gateSql = String.format(
+                "SELECT id, operatorid FROM gate WHERE id = '%s'", gateID);
+
+        String summarySql = String.format("""
                 SELECT
                     COUNT(*) AS total_passengers,
-                    SUM(CASE WHEN IsAboard = TRUE THEN 1 ELSE 0 END) AS boarded_count,
-                    SUM(CASE WHEN IsAboard = FALSE THEN 1 ELSE 0 END) AS not_boarded_count
-                FROM Passenger_Status
-                WHERE GateID = ?
-                """;
+                    COALESCE(SUM(CASE WHEN IsAboard = TRUE THEN 1 ELSE 0 END), 0) AS boarded_count,
+                    COALESCE(SUM(CASE WHEN IsAboard = FALSE THEN 1 ELSE 0 END), 0) AS not_boarded_count
+                FROM PassengerStatus
+                WHERE GateID = '%s'
+                """, gateID);
 
-        String passengersSql = """
+        String passengersSql = String.format("""
                 SELECT
                     ps.PassengerID,
                     p.first_name,
                     p.last_name,
                     ps.IsAboard
-                FROM Passenger_Status ps
+                FROM PassengerStatus ps
                 LEFT JOIN Passenger p
                     ON ps.PassengerID = p.passenger_id
-                WHERE ps.GateID = ?
+                WHERE ps.GateID = '%s'
                 ORDER BY ps.PassengerID
-                """;
+                """, gateID);
 
-        try (PreparedStatement gateStmt = connection.prepareStatement(gateSql);
-             PreparedStatement summaryStmt = connection.prepareStatement(summarySql);
-             PreparedStatement passengersStmt = connection.prepareStatement(passengersSql)) {
+        try {
 
-            gateStmt.setString(1, gateID);
+            // ---------- Gate Info ----------
+            ResultSet gateRs = (ResultSet) db.execute(gateSql, true);
 
-            try (ResultSet gateRs = gateStmt.executeQuery()) {
-                if (!gateRs.next()) {
-                    System.out.println("Error: Gate does not exist.");
-                    return;
-                }
+            if (gateRs == null || !gateRs.next()) {
+                System.out.println("Error: Gate does not exist.");
+                return;
+            }
 
-                Integer operatorID = (Integer) gateRs.getObject("OperatorID");
+            Object operatorObj = gateRs.getObject("operatorid");
 
-                System.out.println("===== Gate Details =====");
-                System.out.println("Gate ID: " + gateRs.getString("ID"));
+            System.out.println("===== Gate Details =====");
+            System.out.println("Gate ID: " + gateID);
 
-                if (operatorID != null) {
-                    System.out.println("Operator ID: " + operatorID);
-                    System.out.println("Status: OPEN");
-                } else {
-                    System.out.println("Operator ID: None");
-                    System.out.println("Status: CLOSED");
-                }
+            if (operatorObj != null) {
+                System.out.println("Operator ID: " + operatorObj);
+                System.out.println("Status: OPEN");
+            } else {
+                System.out.println("Operator ID: None");
+                System.out.println("Status: CLOSED");
+            }
 
+            System.out.println();
+            gateRs.close();
+
+            // ---------- Summary ----------
+            ResultSet summaryRs = (ResultSet) db.execute(summarySql, true);
+
+            if (summaryRs != null && summaryRs.next()) {
+                int total = summaryRs.getInt("total_passengers");
+                int boarded = summaryRs.getInt("boarded_count");
+                int notBoarded = summaryRs.getInt("not_boarded_count");
+
+                System.out.println("===== Passenger Summary =====");
+                System.out.println("Total Passengers: " + total);
+                System.out.println("Boarded: " + boarded);
+                System.out.println("Not Boarded: " + notBoarded);
                 System.out.println();
             }
 
-            summaryStmt.setString(1, gateID);
+            if (summaryRs != null) summaryRs.close();
 
-            try (ResultSet summaryRs = summaryStmt.executeQuery()) {
-                if (summaryRs.next()) {
-                    int totalPassengers = summaryRs.getInt("total_passengers");
-                    int boardedCount = summaryRs.getInt("boarded_count");
-                    int notBoardedCount = summaryRs.getInt("not_boarded_count");
+            // ---------- Passenger List ----------
+            ResultSet rs = (ResultSet) db.execute(passengersSql, true);
 
-                    System.out.println("===== Passenger Summary =====");
-                    System.out.println("Total Passengers: " + totalPassengers);
-                    System.out.println("Boarded: " + boardedCount);
-                    System.out.println("Not Boarded: " + notBoardedCount);
-                    System.out.println();
-                }
-            }
+            System.out.println("===== Passenger List =====");
 
-            passengersStmt.setString(1, gateID);
+            boolean found = false;
 
-            try (ResultSet passengersRs = passengersStmt.executeQuery()) {
-                System.out.println("===== Passenger List =====");
+            if (rs != null) {
+                while (rs.next()) {
+                    found = true;
 
-                boolean foundPassengers = false;
+                    int passengerID = rs.getInt("PassengerID");
+                    String firstName = rs.getString("first_name");
+                    String lastName = rs.getString("last_name");
+                    boolean isAboard = rs.getBoolean("IsAboard");
 
-                while (passengersRs.next()) {
-                    foundPassengers = true;
-
-                    int passengerID = passengersRs.getInt("PassengerID");
-                    String firstName = passengersRs.getString("first_name");
-                    String lastName = passengersRs.getString("last_name");
-                    boolean isAboard = passengersRs.getBoolean("IsAboard");
-
-                    String fullName = ((firstName == null ? "" : firstName) + " " +
+                    String name = ((firstName == null ? "" : firstName) + " " +
                             (lastName == null ? "" : lastName)).trim();
 
-                    if (fullName.isEmpty()) {
-                        fullName = "Name unavailable";
+                    if (name.isEmpty()) {
+                        name = "Name unavailable";
                     }
 
                     System.out.println("Passenger ID: " + passengerID);
-                    System.out.println("Name: " + fullName);
+                    System.out.println("Name: " + name);
                     System.out.println("Boarding Status: " + (isAboard ? "Aboard" : "Not Aboard"));
                     System.out.println("------------------------");
                 }
 
-                if (!foundPassengers) {
-                    System.out.println("No passengers assigned to this gate.");
-                }
+                rs.close();
+            }
+
+            if (!found) {
+                System.out.println("No passengers assigned to this gate.");
             }
 
         } catch (SQLException e) {
-            System.out.println("Error printing gate details: " + e.getMessage());
+            System.out.println("Database Error: " + e.getMessage());
         }
     }
 }
