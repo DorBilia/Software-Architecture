@@ -1,16 +1,14 @@
 import java.sql.SQLException;
 import java.util.Scanner;
 
-public class main{
+public class main {
     public static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) throws SQLException {
-        String dbAddr = "localhost";
-        int dbPort = 5433;
-        String dbUser = "postgres";
-        String dbPass = "postgres";
-        String dbName = "postgres";
-        dbConnection db = new dbConnection(dbUser, dbPass, dbPort, dbAddr, dbName);
+        String JDBCurl = "jdbc:postgresql://localhost:5433/postgres";
+        String user = "postgres";
+        String password = "postgres";
+        dbConnection db = new dbConnection(JDBCurl, user, password);
         menu(db);
     }
 

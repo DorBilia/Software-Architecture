@@ -6,8 +6,7 @@ import java.sql.SQLException;
 public class dbConnection {
     public Connection connection;
 
-    public dbConnection(String username, String password, int port, String dbAddr, String dbName) throws SQLException {
-        String url = "jdbc:postgresql://" + dbAddr + ":" + port + "/" + dbName;
+    public dbConnection(String url, String username, String password) throws SQLException {
         this.connection = DriverManager.getConnection(url, username, password);
         if (connection != null) {
             System.out.println("Connected to the database successfully!");
