@@ -17,7 +17,6 @@ public class dbConnection {
     public Object execute(String query, boolean fetch) {
         try {
             PreparedStatement stmt = connection.prepareStatement(query);
-
             if (fetch) {
                 // Returns a ResultSet
                 return stmt.executeQuery();
@@ -29,7 +28,7 @@ public class dbConnection {
             }
         } catch (SQLException e) {
             System.err.println("Execution Error: " + e.getMessage());
-            return null; // Indication that the function return an error
+            return null; // Indication that the function returns an error
         }
     }
 }

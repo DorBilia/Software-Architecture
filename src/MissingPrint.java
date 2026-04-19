@@ -2,7 +2,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class MissingPrint {
-    private dbConnection db;
+    private final dbConnection db;
 
     public MissingPrint(dbConnection db) {
         this.db = db;
@@ -10,7 +10,7 @@ public class MissingPrint {
 
     public void printMissingPassengers(String gateID) {
         String query = String.format(
-                "SELECT PassengerID FROM PassengerStatus WHERE GateID = '%s' AND IsAboard = false",
+                "SELECT PassengerID FROM Passenger_Status WHERE GateID = '%s' AND IsAboard = false",
                 gateID
         );
 

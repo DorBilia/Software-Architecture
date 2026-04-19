@@ -1,28 +1,30 @@
 import java.util.Scanner;
 
 public class ManageBoarding {
+    public final dbConnection db;
 
-    public static void board_passengers(dbConnection db) {
+    public ManageBoarding(dbConnection db) {
+        this.db = db;
+    }
+
+    public void board_passengers() {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
             System.out.print("Enter boarding passenger ID (or -1 to exit): ");
             int passengerId = scanner.nextInt();
 
-            // Exit condition
             if (passengerId == -1) {
                 System.out.println("Exiting update loop...");
                 break;
             }
 
-            // Build the SQL string
             String updateSql = String.format(
-                    "UPDATE PassengerStatus SET IsAboard = true WHERE PassengerID = %d",
+                    "UPDATE Passenger_Status SET IsAboard = true WHERE PassengerID = %d",
                     passengerId
             );
 
-            // Use your generic function (isSelect = false)
-            Object result = db.execute(updateSql, false);
+            Object result = this.db.execute(updateSql, false);
 
             if (result != null) {
                 int rows = (int) result;

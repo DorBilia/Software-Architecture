@@ -3,7 +3,7 @@ import java.sql.SQLException;
 
 public class GatePrinter {
 
-    private dbConnection db;
+    private final dbConnection db;
 
     public GatePrinter(dbConnection db) {
         this.db = db;
@@ -66,7 +66,7 @@ public class GatePrinter {
                     COUNT(*) AS total_passengers,
                     COALESCE(SUM(CASE WHEN IsAboard = TRUE THEN 1 ELSE 0 END), 0) AS boarded_count,
                     COALESCE(SUM(CASE WHEN IsAboard = FALSE THEN 1 ELSE 0 END), 0) AS not_boarded_count
-                FROM PassengerStatus
+                FROM Passenger_Status
                 WHERE GateID = '%s'
                 """, gateID);
 
@@ -76,7 +76,7 @@ public class GatePrinter {
                     p.first_name,
                     p.last_name,
                     ps.IsAboard
-                FROM PassengerStatus ps
+                FROM Passenger_Status ps
                 LEFT JOIN Passenger p
                     ON ps.PassengerID = p.passenger_id
                 WHERE ps.GateID = '%s'
